@@ -1,13 +1,39 @@
-const fetch = require('node-fetch')
+const fetch = require('node-fetch');
+const readline = require("readline-sync");
 
 const app_key = '';
-const stopId = '490008660N';
+// const stopId = '490008660N';
+// const postCode = "N103TG";
 
 
 async function getBusArrivalsFromStopId(stopId) {
     const body = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals?app_key=${app_key}`)
         .then(response => response.json())
     return body
+}
+
+async function getBusStopsFromPosition(position) {
+    const body = await fetch(`https://api.tfl.gov.uk/StopPoint/?lon=${position.lon}&lat=${position.lat}&stopTypes=NaptanPublicBusCoachTram&app_key=${app_key}`)
+        .then(response => response.json())
+    return body["stopPoints"]
+}
+
+async function getLatLong(postCode) {
+    const body = await fetch(`http://api.postcodes.io/postcodes/${postCode}?app_key=${app_key}`)
+        .then(response => response.json())
+    return {'lon': body["result"]["longitude"], 'lat': body["result"]["latitude"]}
+}
+
+function filterBusStopData(busStops) {
+    const filteredBusStops = [];
+    for (let i = 0; i < busStops.length; i++) {
+        const currentBusStop = {};
+        currentBusStop['id'] = busStops[i]['naptanId']
+        currentBusStop['distance'] = busStops[i]['distance']
+        currentBusStop['commonName'] = busStops[i]['commonName']
+        filteredBusStops.push(currentBusStop)
+    }
+    return filteredBusStops;
 }
 
 function getNextBusses(arrivalResponse) {
@@ -32,14 +58,25 @@ function getNextNumberOfBusses(nextBusses, n = 5) {
     }
 }
 
-
-
 async function main() {
-    let arrivalResponse = await getBusArrivalsFromStopId(stopId);
-    let nextBusses = getNextBusses(arrivalResponse);
+    console.log('Please enter a post code')
+    const postCode = readline.prompt();
+    const position = await getLatLong(postCode);
+    
+    const busStops = await getBusStopsFromPosition(position);
+    const filteredBusStops = filterBusStopData(busStops);
+    // QQ: Get closest two bus stops 
+    console.log(filteredBusStops)
 
-    console.log(getNextNumberOfBusses(nextBusses))
+    // QQ: for stops in closest 2
+    // let arrivalResponse = await getBusArrivalsFromStopId(stopId);
+    // let nextBusses = getNextBusses(arrivalResponse);
+
+    // console.log(getNextNumberOfBusses(nextBusses))
     console.log("END");
 }
 
 main()
+
+
+// part 2
