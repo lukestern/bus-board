@@ -4,15 +4,41 @@ const winston = require('winston');
 
 
 const consoleFormat = winston.format.printf(info => `${info.message}`)
+const logFileFormat = winston.format.printf(info => `${info.level}: ${info.message}`)
 
 const logger = winston.createLogger({
-      transports: [
-        new winston.transports.Console({format: consoleFormat}),
-        new winston.transports.File({ filename: 'bus-board.log' })
-      ]
-    });
+    transports: [
+        new winston.transports.Console({ format: consoleFormat }),
+        new winston.transports.File({ filename: 'bus-board.log', format: logFileFormat })
+    ]
+});
 
 const app_key = '';
+
+function getPostcodeInput() {
+    let postCode;
+    do {
+        console.log('\n Please enter a post code:')
+        postCode = readline.prompt();
+    } while (!validPostcode(postCode));
+    logger.info(`Valid postcode provided: ${postCode}`)
+    return postCode;
+}
+
+function validPostcode(postcode) {
+    postcode = postcode.replace(/\s/g, "");
+    var regex = /^[A-Z]{1,2}[0-9]{1,2} ?[0-9][A-Z]{2}$/i;
+    try {
+        valid = regex.test(postcode)
+        if (!valid) {
+            throw `Invalid postcode: ${postcode}`
+        }
+    }
+    catch (err) {
+        logger.error(err)
+    }
+    return valid;
+}
 
 async function getBusArrivalsFromStopId(stopId) {
     const body = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals?app_key=${app_key}`)
@@ -53,17 +79,17 @@ function getNumberOfStops(busStops, n = 2) {
     }
 }
 
-function getNextBusses(arrivalResponse) {
-    const nextBusses = [];
+function filterBusData(arrivalResponse) {
+    const busses = [];
     for (let i = 0; i < arrivalResponse.length; i++) {
         const currentBus = {};
         currentBus['lineName'] = arrivalResponse[i]['lineName']
         currentBus['destinationName'] = arrivalResponse[i]['destinationName']
         currentBus['expectedArrival'] = arrivalResponse[i]['expectedArrival']
         currentBus['timeToStation'] = arrivalResponse[i]['timeToStation']
-        nextBusses.push(currentBus)
+        busses.push(currentBus)
     }
-    return nextBusses;
+    return busses;
 }
 
 function getNextNumberOfBusses(nextBusses, n = 5) {
@@ -86,20 +112,27 @@ function printBusInfo(bus) {
 
 async function main() {
     logger.info(`START: ${new Date().toUTCString()}`)
-    
-    console.log('Please enter a post code')
-    const postCode = readline.prompt();
-    const position = await getLatLong(postCode);
 
-    const busStops = await getBusStopsFromPosition(position);
+    const postCode = getPostcodeInput();
+    const position = await getLatLong(postCode);
+    let busStops;
+    try {
+        busStops = await getBusStopsFromPosition(position);
+        if (busStops.length === 0) {
+            throw 'No bus stops found within 200 meters'
+        }
+    }
+    catch (err) {
+        logger.error(err)
+    }
     const filteredBusStops = filterBusStopData(busStops);
     const nextStops = getNumberOfStops(filteredBusStops);
 
     for (let i = 0; i < nextStops.length; i++) {
         printBusStopInfo(nextStops[i]);
         let arrivalResponse = await getBusArrivalsFromStopId(nextStops[i]["id"]);
-        let nextBusses = getNextBusses(arrivalResponse);
-        let nextFiveBusses = getNextNumberOfBusses(nextBusses);
+        let filteredBusses = filterBusData(arrivalResponse);
+        let nextFiveBusses = getNextNumberOfBusses(filteredBusses);
         for (let j = 0; j < nextFiveBusses.length; j++) {
             printBusInfo(nextFiveBusses[j])
         }
@@ -108,24 +141,3 @@ async function main() {
 }
 
 main()
-// implement logging to a file
-// validate postcode
-// logging and other errors
-
-// try {
-//     // where the code goes
-//     adddlert("Welcome guest!");
-// }
-// catch (err) {
-//     // put our throws and our logs in here
-//     throw 'test if this goes to the console'
-//     console.log(err.name); // find out what the error name is. 
-//     console.log(err.message); // find out what the message looks like. 
-//     if(err.name ==="")
-// }
-// finally() {
-//     // not sure what to put in here are we dont have anything open. Maybe unnecessary. 
-
-// }
-
-//Example errors
