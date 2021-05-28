@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "node-fetch": "^2.6.1",
+    "readline-sync": "^1.4.10"
+  },
+  "name": "bus-board",
+  "description": "TechSwitch training Bus Board",
+  "version": "1.0.0",
+  "main": "tfl-api.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukestern/bus-board.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lukestern/bus-board/issues"
+  },
+  "homepage": "https://github.com/lukestern/bus-board#readme"
+}

@@ -2,9 +2,6 @@ const fetch = require('node-fetch');
 const readline = require("readline-sync");
 
 const app_key = '';
-// const stopId = '490008660N';
-// const postCode = "N103TG";
-
 
 async function getBusArrivalsFromStopId(stopId) {
     const body = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals?app_key=${app_key}`)
@@ -36,6 +33,15 @@ function filterBusStopData(busStops) {
     return filteredBusStops;
 }
 
+function getNumberOfStops(busStops, n = 2) {
+    const sortedStops = busStops.sort(function (a, b) { return a.distance - b.distance });
+    if (sortedStops.length <= n) {
+        return sortedStops;
+    } else {
+        return sortedStops.slice(0, n) // second parameter is relative to the first
+    }
+}
+
 function getNextBusses(arrivalResponse) {
     const nextBusses = [];
     for (let i = 0; i < arrivalResponse.length; i++) {
@@ -58,6 +64,15 @@ function getNextNumberOfBusses(nextBusses, n = 5) {
     }
 }
 
+function printBusStopInfo(stop) {
+    console.log(`\nBus Stop: ${stop["commonName"]}`);
+
+}
+
+function printBusInfo(bus) {
+    console.log(`\t${bus.lineName} ${bus.destinationName} arriving in approximately ${Math.floor(bus.timeToStation / 60)} minutes`)
+}
+
 async function main() {
     console.log('Please enter a post code')
     const postCode = readline.prompt();
@@ -65,18 +80,18 @@ async function main() {
     
     const busStops = await getBusStopsFromPosition(position);
     const filteredBusStops = filterBusStopData(busStops);
-    // QQ: Get closest two bus stops 
-    console.log(filteredBusStops)
+    const nextStops = getNumberOfStops(filteredBusStops);
 
-    // QQ: for stops in closest 2
-    // let arrivalResponse = await getBusArrivalsFromStopId(stopId);
-    // let nextBusses = getNextBusses(arrivalResponse);
-
-    // console.log(getNextNumberOfBusses(nextBusses))
+    for(let i=0; i<nextStops.length; i++){
+        printBusStopInfo(nextStops[i]);
+        let arrivalResponse = await getBusArrivalsFromStopId(nextStops[i]["id"]);
+        let nextBusses = getNextBusses(arrivalResponse);
+        let nextFiveBusses = getNextNumberOfBusses(nextBusses);
+        for(let j=0; j<nextFiveBusses.length; j++){
+            printBusInfo(nextFiveBusses[j])
+        }
+    }
     console.log("END");
 }
 
 main()
-
-
-// part 2
