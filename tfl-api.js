@@ -1,5 +1,16 @@
 const fetch = require('node-fetch');
 const readline = require("readline-sync");
+const winston = require('winston');
+
+
+const consoleFormat = winston.format.printf(info => `${info.message}`)
+
+const logger = winston.createLogger({
+      transports: [
+        new winston.transports.Console({format: consoleFormat}),
+        new winston.transports.File({ filename: 'bus-board.log' })
+      ]
+    });
 
 const app_key = '';
 
@@ -18,7 +29,7 @@ async function getBusStopsFromPosition(position) {
 async function getLatLong(postCode) {
     const body = await fetch(`http://api.postcodes.io/postcodes/${postCode}?app_key=${app_key}`)
         .then(response => response.json())
-    return {'lon': body["result"]["longitude"], 'lat': body["result"]["latitude"]}
+    return { 'lon': body["result"]["longitude"], 'lat': body["result"]["latitude"] }
 }
 
 function filterBusStopData(busStops) {
@@ -65,33 +76,56 @@ function getNextNumberOfBusses(nextBusses, n = 5) {
 }
 
 function printBusStopInfo(stop) {
-    console.log(`\nBus Stop: ${stop["commonName"]}`);
+    logger.info(`\n Bus Stop: ${stop["commonName"]}`);
 
 }
 
 function printBusInfo(bus) {
-    console.log(`\t${bus.lineName} ${bus.destinationName} arriving in approximately ${Math.floor(bus.timeToStation / 60)} minutes`)
+    logger.info(`\t ${bus.lineName} ${bus.destinationName} arriving in approximately ${Math.floor(bus.timeToStation / 60)} minutes`)
 }
 
 async function main() {
+    logger.info(`START: ${new Date().toUTCString()}`)
+    
     console.log('Please enter a post code')
     const postCode = readline.prompt();
     const position = await getLatLong(postCode);
-    
+
     const busStops = await getBusStopsFromPosition(position);
     const filteredBusStops = filterBusStopData(busStops);
     const nextStops = getNumberOfStops(filteredBusStops);
 
-    for(let i=0; i<nextStops.length; i++){
+    for (let i = 0; i < nextStops.length; i++) {
         printBusStopInfo(nextStops[i]);
         let arrivalResponse = await getBusArrivalsFromStopId(nextStops[i]["id"]);
         let nextBusses = getNextBusses(arrivalResponse);
         let nextFiveBusses = getNextNumberOfBusses(nextBusses);
-        for(let j=0; j<nextFiveBusses.length; j++){
+        for (let j = 0; j < nextFiveBusses.length; j++) {
             printBusInfo(nextFiveBusses[j])
         }
     }
-    console.log("END");
+    logger.info("END");
 }
 
 main()
+// implement logging to a file
+// validate postcode
+// logging and other errors
+
+// try {
+//     // where the code goes
+//     adddlert("Welcome guest!");
+// }
+// catch (err) {
+//     // put our throws and our logs in here
+//     throw 'test if this goes to the console'
+//     console.log(err.name); // find out what the error name is. 
+//     console.log(err.message); // find out what the message looks like. 
+//     if(err.name ==="")
+// }
+// finally() {
+//     // not sure what to put in here are we dont have anything open. Maybe unnecessary. 
+
+// }
+
+//Example errors

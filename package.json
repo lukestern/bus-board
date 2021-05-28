@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "node-fetch": "^2.6.1",
-    "readline-sync": "^1.4.10"
+    "readline-sync": "^1.4.10",
+    "winston": "^3.3.3"
   },
   "name": "bus-board",
   "description": "TechSwitch training Bus Board",
