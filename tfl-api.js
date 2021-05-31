@@ -1,3 +1,4 @@
+const { Console } = require('console');
 const fetch = require('node-fetch');
 const readline = require("readline-sync");
 const winston = require('winston');
@@ -13,7 +14,8 @@ const logger = winston.createLogger({
     ]
 });
 
-const app_key = '';
+const app_id = 'Techswitch'; // removed for upload. 
+const app_key = '30b5438c8deb4ab68a7277f855e17480'; // removed for upload. 
 
 function getPostcodeInput() {
     let postCode;
@@ -110,6 +112,58 @@ function printBusInfo(bus) {
     logger.info(`\t ${bus.lineName} ${bus.destinationName} arriving in approximately ${Math.floor(bus.timeToStation / 60)} minutes`)
 }
 
+function getDirectionResponse() {
+    let response;
+    let test;
+    do {
+        console.log('\n If you would like instructions to the closest bus stop, return "Y" otherwise return "N"')
+        response = readline.prompt();
+        test = validDirectionResponse(response)
+    } while (test === 3); // exists while loop when the value is not 3
+    logger.info(`Valid response provided: ${response}`);
+    return test;
+}
+
+function validDirectionResponse(response){
+
+    if(response =="Y"){
+        return 1;
+    }else if(response == "N"){
+        return 2;
+    }else {
+        logger.info(`Unclear response provided: ${response}`) // for logger
+        return 3;
+    }
+}
+
+async function getJourneyPlanner(bustop, position){
+    
+    // console.log(position["lat"]);
+    // console.log(position["lon"]);
+    // console.log(bustop[0]["id"]);
+    const body = await fetch(`https://api.tfl.gov.uk/journey/journeyresults/${position["lat"]},${position["lon"]}/to/${bustop[0]["id"]}?routeBetweenEntrances=true&app_id=${app_id}&app_key=${app_key}`)
+        .then(response => response.json());
+    return body;
+} 
+
+function extractDirections(routeJson){
+
+    
+    const arr_steps = routeJson["journeys"][0]["legs"][0]["instruction"]["steps"];
+
+    let string_instructions = routeJson["journeys"][0]["legs"][0]["instruction"]["detailed"] + "Bus Stop:";
+
+    // use for loop to stringbuild if there are multiple steps to get to a bus stop eg turns etc.
+    for(let i=0;i<arr_steps.length;i++){
+        string_instructions = string_instructions + "\n" + arr_steps[i]["description"];
+
+    }
+
+    string_instructions = string_instructions + "\n" + "You have now arrived at your closest bus stop";
+
+    return string_instructions;
+}
+
 async function main() {
     logger.info(`START: ${new Date().toUTCString()}`)
 
@@ -137,6 +191,18 @@ async function main() {
             printBusInfo(nextFiveBusses[j])
         }
     }
+
+    const directionResponse = getDirectionResponse();
+
+    if(directionResponse===1){ // only is Y is provided to get the instructions
+        const routeJson = await getJourneyPlanner(nextStops,position);
+        const string_Directions = extractDirections(routeJson);
+        console.log(string_Directions);
+           //
+    }else{
+        // go to end
+    }
+    
     logger.info("END");
 }
 
